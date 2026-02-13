@@ -22,5 +22,25 @@ pnpm-debug.log*
 src/prisma/generated/
 *.db # For SQLite database files
 
+# Python-related
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.pdb
+*.coverage
+*.hypothesis/
+
+# Virtual environment
+venv/
+env/
+.venv/
+ENV/
+.env/
+
+# Pytest
+.cache/
+.pytest_cache/
+
 # Editor/IDE specific
 .vscode/
