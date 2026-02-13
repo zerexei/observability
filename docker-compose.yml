@@ -98,7 +98,8 @@ services:
   # =========================
   k6:
     image: grafana/k6:latest
-    # command: run /scripts/load-test.js # docker compose run k6 run /scripts/load-test.js
+    # command: run /scripts/load-test.js # docker compose exec k6 k6 run /scripts/load-test.js
+    entrypoint: ["tail", "-f", "/dev/null"]
     volumes:
       - ./scripts:/scripts
     networks:
