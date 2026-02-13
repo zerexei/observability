@@ -106,11 +106,6 @@ services:
       - app-network
     depends_on:
       - app
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.k6.rule=Host(`k6.localhost`)"
-      - "traefik.http.routers.k6.entrypoints=web"
-      - "traefik.http.services.k6.loadbalancer.server.port=80"
 
 # =========================
 # Volumes
