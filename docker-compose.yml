@@ -93,6 +93,24 @@ services:
       - "traefik.http.routers.grafana.entrypoints=web"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
+  # =========================
+  # k6 - Load Testing Service
+  # =========================
+  k6:
+    image: grafana/k6:latest
+    # command: run /scripts/load-test.js # docker compose run k6 run /scripts/load-test.js
+    volumes:
+      - ./scripts:/scripts
+    networks:
+      - app-network
+    depends_on:
+      - app
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.k6.rule=Host(`k6.localhost`)"
+      - "traefik.http.routers.k6.entrypoints=web"
+      - "traefik.http.services.k6.loadbalancer.server.port=80"
+
 # =========================
 # Volumes
 # =========================
