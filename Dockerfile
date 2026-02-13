@@ -1,25 +1,14 @@
-# ---- Build stage ----
-FROM node:20-alpine AS builder
+FROM python:3.14
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install
+COPY ./requirements.txt /app/requirements.txt
 
-COPY . .
-RUN npm run build
+RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
 
-# ---- Production stage ----
-FROM node:20-alpine
+COPY ./server /app
 
-WORKDIR /app
+EXPOSE 8000
 
-COPY package*.json ./
-RUN npm install --omit=dev
-
-COPY --from=builder /app/dist ./dist
-
-ENV NODE_ENV=production
-EXPOSE 3000
-
-CMD ["node", "dist/index.js"]
+# CMD ["fastapi", "run", "main.py", "--port", "8000", "--proxy-headers"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--reload"]
