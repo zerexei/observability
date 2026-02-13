@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s # The default scrape interval (how often Prometheus scrapes metrics)
+  evaluation_interval: 15s # The interval for evaluating rules
+
+scrape_configs:
+  #  - job_name: "prometheus"
+  #     scrape_interval: 5s # Scrape the Prometheus server itself every 5 seconds
+  #     static_configs:
+  #       - targets: ["prometheus:9090"] # Prometheus server itself, usually running on port 9090
+
+  - job_name: "fastapi"
+    scrape_interval: 10s # Scrape the FastAPI app every 10 seconds
+    metrics_path: "/metrics" # The path where metrics are exposed
+    static_configs:
+      - targets: ["app:8000"] # Target your FastAPI app on app.localhost:8000
