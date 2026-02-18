@@ -6,39 +6,14 @@ receivers:
 
 processors:
   batch:
-  memory_limiter:
-    check_interval: 1s
-    limit_mib: 4000
-    spike_limit_mib: 500
-  logging:
-    log_level: debug
-  transform:
-    metric_statements:
-      - include: ".*"
-        action: update
-        new_name: "otelcol_metric_$1"
 
 exporters:
   prometheus:
-    endpoint: "0.0.0.0:8888"  # Expose metrics for Prometheus
-  loki:
-    endpoint: "http://loki:3100/loki/api/v1/push"
-  otlp/tempo:
-    endpoint: "tempo:4317"
-    tls:
-      insecure: true
+    endpoint: "0.0.0.0:8889"
 
 service:
   pipelines:
     metrics:
       receivers: [otlp]
-      processors: [batch, memory_limiter, logging, transform]
+      processors: [batch]
       exporters: [prometheus]
-    logs:
-      receivers: [otlp]
-      processors: [batch, memory_limiter, logging]
-      exporters: [loki]
-    traces:
-      receivers: [otlp]
-      processors: [batch, memory_limiter, logging]
-      exporters: [otlp/tempo]

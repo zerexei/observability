@@ -236,12 +236,13 @@ services:
   # OpenTelemetry Collector
   # =========================
   opentelemetry-collector:
-    image: otel/opentelemetry-collector-contrib:latest
     container_name: opentelemetry-collector
-    ports:
-      - "8888:8888" # Prometheus metrics exporter
+    image: otel/opentelemetry-collector
+    command: --config=/etc/otelcol/config.yml
     volumes:
-      - ./observability/opentelemetry/otel-collector-config.yml:/etc/otel-collector-config.yml
+      - ./observability/opentelemetry/otel-collector-config.yml:/etc/otelcol/config.yml
+    ports:
+      - 8889:8889 # Prometheus exporter metrics
     networks:
       - app-network
 
