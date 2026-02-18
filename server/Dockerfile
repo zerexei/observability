@@ -6,7 +6,7 @@ COPY ./requirements.txt /app/requirements.txt
 
 RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
 
-COPY ./server /app
+COPY . /app
 
 EXPOSE 8000
 
