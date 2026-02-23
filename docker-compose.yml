@@ -101,6 +101,8 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    volumes:
+      - ./grafana/data:/var/lib/grafana # dashboard, users and config
     depends_on:
       - prometheus
       - loki
@@ -120,7 +122,8 @@ services:
     image: prom/prometheus
     container_name: prometheus
     volumes:
-      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/data:/data # persist TSDB data
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     networks:
       - app-network
     depends_on:
