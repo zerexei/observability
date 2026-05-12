@@ -1,108 +1,190 @@
-# FastAPI Observability Stack
+# Observability-Driven Backend Platform (FastAPI + OpenTelemetry Stack)
 
-A comprehensive, production-ready observability demonstration featuring a FastAPI application integrated with the full LGTP stack (Loki, Grafana, Tempo, Prometheus) using OpenTelemetry.
+## Overview
 
-## 🚀 Overview
+This project is a backend system designed to evaluate observability as a first-class engineering concern in distributed applications. It demonstrates how a production-style FastAPI service behaves under load, failure, and concurrency pressure while being fully instrumented for logs, metrics, and traces.
 
-This project showcases how to implement a complete observability lifecycle:
-- **Tracing**: Distributed tracing with Tempo.
-- **Metrics**: Infrastructure and application metrics with Prometheus.
-- **Logging**: Centralized logging with Loki.
-- **Alerting**: Proactive monitoring with Alertmanager.
-- **Visualization**: Unified dashboards in Grafana.
-- **Instrumentation**: Vendor-neutral telemetry via OpenTelemetry.
+The focus is not feature delivery, but system-level behavior: how requests propagate, how failures surface, and how quickly the system can be debugged using observability signals.
 
-## 🛠️ Tech Stack
+Key goals:
 
-- **Core**: [FastAPI](https://fastapi.tiangolo.com/), [Python 3.12+](https://www.python.org/)
-- **Infrastructure**: [Docker Compose](https://docs.docker.com/compose/), [Traefik](https://traefik.io/) (Reverse Proxy)
-- **Database & Cache**: [PostgreSQL](https://www.postgresql.org/), [Redis](https://redis.io/)
-- **Storage**: [MinIO](https://min.io/) (S3-compatible storage for Loki/Tempo)
-- **Observability**:
-  - [OpenTelemetry](https://opentelemetry.io/) (SDKs & Collector)
-  - [Prometheus](https://prometheus.io/) (Metrics)
-  - [Grafana Loki](https://grafana.com/oss/loki/) (Logs)
-  - [Grafana Tempo](https://grafana.com/oss/tempo/) (Traces)
-  - [Grafana](https://grafana.com/) (Dashboards)
-  - [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) (Alerting)
+- End-to-end request visibility across services
+- Observable async and concurrent request execution
+- Failure detection and debugging through telemetry
+- Production-style operational insight under load
 
-## 🏗️ Architecture
+## Architecture
+```
+The system is designed as a distributed backend with explicit instrumentation at every execution layer.
 
-The system is composed of multiple microservices orchestrated by Docker Compose:
-
-- **Server**: 5 replicas of the FastAPI application, load-balanced by Traefik.
-- **Telemetry Flow**:
-    - **Traces**: Sent directly to Tempo via OTLP/gRPC.
-    - **Metrics**: Sent to OpenTelemetry Collector, then scraped by Prometheus.
-    - **Logs**: Sent directly to Loki via OTLP/HTTP.
-- **Exporters**: Dedicated exporters for PostgreSQL and Redis to provide deep infrastructure insights.
-
-## 🚦 Getting Started
-
-### Prerequisites
-
-- Docker and Docker Compose
-- Node.js (optional, for load testing with k6)
-
-### Setup
-
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd observability
-   ```
-
-2. **Configure Environment**:
-   Copy the example environment file and adjust values if necessary:
-   ```bash
-   cp .env.example .env
-   ```
-
-3. **Launch the Stack**:
-   ```bash
-   docker compose up -d
-   ```
-
-### Accessing the Services
-
-The project uses Traefik to provide clean local hostnames (ensure your `hosts` file points these to `127.0.0.1` or use a tool like `dnsmasq`):
-
-| Service | URL | Description |
-| :--- | :--- | :--- |
-| **FastAPI App** | [http://server.localhost](http://server.localhost) | The main application API |
-| **Grafana** | [http://grafana.localhost](http://grafana.localhost) | Visualization & Dashboards |
-| **Prometheus** | [http://prometheus.localhost](http://prometheus.localhost) | Metrics exploration |
-| **Alertmanager** | [http://alertmanager.localhost](http://alertmanager.localhost) | Alert management |
-| **MinIO Console**| [http://minio.localhost](http://minio.localhost) | Object storage UI |
-| **Traefik Dashboard** | [http://localhost:8080](http://localhost:8080) | Proxy & Load Balancer status |
-
-## 🧪 Load Testing
-
-To see the observability stack in action, generate some traffic using the provided [k6](https://k6.io/) script:
-
-```bash
-# Using local k6 installation
-k6 run scripts/load-test.js
+Client / Load Generator (k6)
+        │
+        ▼
+Load Balanced FastAPI Service (Traefik, 5 replicas)
+        │
+        ▼
+Application Layer (business workflows)
+        │
+        ▼
+Instrumentation Layer (OpenTelemetry SDK)
+        │
+ ┌──────────────┬──────────────┬──────────────┐
+ ▼              ▼              ▼
+Logs (Loki)   Metrics (Prometheus)   Traces (Tempo)
+        │              │               │
+        └──────────────┴──────────────┘
+                       ▼
+                 Grafana (Correlation + Dashboards)
 ```
 
-The load test simulates concurrent users hitting various endpoints, which will populate Grafana dashboards with real-time metrics, traces, and logs.
+## Core Components
+- API Layer: FastAPI service handling concurrent HTTP requests
+- Worker/Processing Layer: Async execution paths simulating real backend workflows
+- Telemetry Pipeline: OpenTelemetry Collector exporting to Prometheus, Loki, and Tempo
+- Data Stores: PostgreSQL (state), Redis (cache + coordination)
+- Load Balancer: Traefik routing traffic across service replicas
+- Observability Stack: Grafana for unified visualization and correlation
 
-## 📊 Observability Features
+## Key Features
+Distributed Request Visibility
+- Each request is assigned a correlation context (trace_id/span_id)
+- Full lifecycle tracking across API → service logic → external dependencies
+High-Concurrency API Layer
+- Multi-replica FastAPI deployment behind a load balancer
+- Concurrent request handling with async I/O
+- Designed to expose race conditions and bottlenecks under load
+Event-Driven Observability Model
+- Logs, metrics, and traces emitted at each execution boundary
+- Structured telemetry enables cross-signal debugging (log ↔ trace ↔ metric correlation)
+Failure Simulation Layer
+- Injected latency spikes
+- Controlled exception bursts
+- Retry storms with backoff behavior
+- Queue/backpressure simulation for throughput stress testing
 
-- **Correlation**: Logs are automatically enriched with `trace_id` and `span_id`, allowing seamless navigation from a log entry to its corresponding trace in Grafana.
-- **Custom Metrics**: The application tracks `app_requests_total` and `app_request_duration_seconds` with high-cardinality attributes like HTTP status and path.
-- **Infrastructure Monitoring**: Built-in dashboards for hardware (Node Exporter), Database (Postgres Exporter), and Cache (Redis Exporter).
+## Async Processing Model
 
-## 🚨 Alerting & Monitoring
+The system is designed around non-blocking request execution and event-driven workflows.
 
-The project includes pre-configured alerting rules in Prometheus to monitor the application's health:
+Execution Flow
+1. Client request enters FastAPI async endpoint
+2. Request context is propagated across async service layers
+3. Background tasks simulate downstream work (DB/cache/external calls)
+4. Telemetry emitted at each step (metrics + spans + logs)
+5. Response returned without blocking global execution pipeline
 
-- **HighErrorRate**: Triggered if the rate of `5xx` responses exceeds 1/sec for 30s.
-- **HighLatency**: Triggered if the P95 latency is above 1 second for 1 minute.
-- **PostgresDown**: Immediate alert if the database becomes unreachable.
+Concurrency Characteristics
+- Async I/O for all I/O-bound operations
+- Controlled concurrency boundaries for downstream dependencies
+- Safe execution under concurrent load bursts
+- Designed to expose contention points (DB, cache, external calls)
 
-Alerts are routed via **Alertmanager**, which can be accessed at `http://alertmanager.localhost`.
+Queue/Backpressure Simulation
 
-## 📄 License
+While not a full message queue system, the architecture simulates:
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+- Worker saturation under high throughput
+- Delayed task execution under load
+- Backpressure effects on upstream request latency
+
+## Reliability Design
+Fault Tolerance Patterns
+- Retry Strategy
+  - Exponential backoff on transient failures
+  - Retry limits to prevent cascading failures
+- Failure Isolation
+  - Fault injection is scoped per service layer
+  - Failures do not immediately propagate globally
+- Graceful Degradation
+  - Cache fallback paths (Redis)
+  - Reduced dependency coupling in critical request paths
+Observability-Driven Debugging
+- Full request trace reconstruction via Tempo
+- Centralized log aggregation via Loki
+- Metrics-based anomaly detection (Prometheus)
+Load & Stress Validation
+- k6-based load testing simulating concurrent users
+- Observability validation under:
+  - High RPS conditions
+  - Elevated error rates
+  - Latency degradation scenarios
+Key SLO Signals
+- Request latency (p50 / p95 / p99)
+- Error rate per endpoint
+- Throughput (requests per second)
+- Dependency health (DB/Redis saturation)
+
+## Tech Stack
+Backend
+- FastAPI
+- Python 3.12+
+Infrastructure
+- Docker Compose
+- Traefik (reverse proxy / load balancing)
+- PostgreSQL (state persistence)
+- Redis (cache + coordination layer)
+- MinIO (object storage for observability backends)
+Observability
+- OpenTelemetry (instrumentation + collector)
+- Prometheus (metrics)
+- Loki (logs)
+- Tempo (distributed tracing)
+- Grafana (visualization + correlation)
+- Alertmanager (alert routing)
+Load Testing
+- k6 (concurrent traffic simulation)
+
+## Running Locally
+Prerequisites
+- Docker + Docker Compose
+- (Optional) k6 for load testing
+
+Setup
+```
+git clone <repository-url>
+cd observability
+cp .env.example .env
+docker compose up -d
+```
+
+Service Access
+
+| Service           | URL                                                            |
+| ----------------- | -------------------------------------------------------------- |
+| FastAPI Service   | [http://server.localhost](http://server.localhost)             |
+| Grafana           | [http://grafana.localhost](http://grafana.localhost)           |
+| Prometheus        | [http://prometheus.localhost](http://prometheus.localhost)     |
+| Alertmanager      | [http://alertmanager.localhost](http://alertmanager.localhost) |
+| MinIO Console     | [http://minio.localhost](http://minio.localhost)               |
+| Traefik Dashboard | [http://localhost:8080](http://localhost:8080)                 |
+
+Load Testing
+```
+k6 run scripts/load-test.js
+```
+This generates concurrent traffic to validate:
+
+- tracing propagation
+- metric accuracy under load
+- log correlation consistency
+- system behavior under stress
+
+## Engineering Tradeoffs
+- Microservice-style observability stack vs simplicity
+  - Chosen to reflect production-like debugging workflows rather than minimal setup
+- Full telemetry everywhere vs performance overhead
+  - Acceptable overhead to prioritize observability correctness
+- Simulated queues vs real message broker
+  - Keeps system focused on observability rather than infrastructure complexity
+- Stateless API replicas
+  - Enables horizontal scaling and exposes concurrency issues clearly under load
+
+## Key Takeaways
+
+This system demonstrates how backend services behave when treated as observable, concurrent, failure-prone distributed systems. It focuses on:
+
+- Production-style instrumentation boundaries
+- Async execution under real concurrency pressure
+- Failure visibility and debugging workflows
+- Cross-signal correlation (logs, metrics, traces)
+- System behavior under controlled degradation scenarios
