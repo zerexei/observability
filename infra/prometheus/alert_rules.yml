@@ -1,0 +1,29 @@
+groups:
+  - name: PlatformAlerts
+    rules:
+      - alert: HighErrorRate
+        expr: sum(rate(http_server_duration_count{http_response_status_code=~"5.."}[1m])) / sum(rate(http_server_duration_count[1m])) > 0.1
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "High API Error Rate"
+          description: "API error rate is above 10% on instance {{ $labels.instance }}"
+
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(http_server_duration_bucket[5m])) by (le, http_route)) > 0.5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High P95 Latency"
+          description: "P95 latency for {{ $labels.http_route }} is above 500ms"
+
+      - alert: ServiceUnavailable
+        expr: up{job="opentelemetry-collector"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "OTEL Collector Down"
+          description: "The observability pipeline is broken."

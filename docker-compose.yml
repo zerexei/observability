@@ -3,14 +3,19 @@ services:
   # Server - FastAPI
   # =========================
   server:
-    build: ./server
+    build: ./app
     deploy:
       replicas: 5
     volumes:
-      - ./server:/app
+      - ./app:/app
     networks:
       - app-network
     restart: always
+    environment:
+      - DATABASE_URL=postgresql://${DB_USERNAME:-user}:${DB_PASSWORD:-password}@postgres:5432/${DB_DATABASE:-dbname}
+      - REDIS_URL=redis://redis:6379/0
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://opentelemetry-collector:4317
+      - SERVICE_NAME=fastapi-service
     depends_on:
       - postgres
       - redis
@@ -96,13 +101,19 @@ services:
   # Grafana - use template 1860
   # =========================
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana:10.2.3
     container_name: grafana
     environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-password}
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor,traceToMetrics,publicDashboards
     volumes:
-      - ./grafana/data:/var/lib/grafana # dashboard, users and config
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./infra/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./infra/grafana/dashboards:/etc/grafana/provisioning/dashboards/json
     depends_on:
       - prometheus
       - loki
@@ -122,8 +133,8 @@ services:
     image: prom/prometheus
     container_name: prometheus
     volumes:
-      - ./prometheus/data:/data # persist TSDB data
-      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/data:/data # persist TSDB data
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     networks:
       - app-network
     depends_on:
@@ -141,7 +152,7 @@ services:
     image: prom/alertmanager:latest
     container_name: prometheus-alertmanager
     volumes:
-      - ./observability/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./infra/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
     networks:
       - app-network
     labels:
@@ -209,7 +220,7 @@ services:
     container_name: grafana-loki
     command: -config.file=/etc/loki/local-config.yml
     volumes:
-      - ./observability/loki/loki-config.yml:/etc/loki/local-config.yml
+      - ./infra/loki/loki-config.yml:/etc/loki/local-config.yml
     ports:
       - "3100:3100"
     networks:
@@ -228,7 +239,7 @@ services:
       - MINIO_USER=${MINIO_USER}
       - MINIO_PASSWORD=${MINIO_PASSWORD}
     volumes:
-      - ./observability/tempo/tempo-config.yml:/etc/tempo/config.yml
+      - ./infra/tempo/tempo-config.yml:/etc/tempo/config.yml
     ports:
       - "3200:3200"
     networks:
@@ -244,24 +255,24 @@ services:
     image: otel/opentelemetry-collector
     command: --config=/etc/otelcol/config.yml
     volumes:
-      - ./observability/opentelemetry/otel-collector-config.yml:/etc/otelcol/config.yml
+      - ./infra/otel/otel-collector-config.yml:/etc/otelcol/config.yml
     ports:
       - 8889:8889 # Prometheus exporter metrics
     networks:
       - app-network
 
-  # # =========================
-  # # k6 - Load Testing
-  # # =========================
-  # k6:
-  #   image: grafana/k6:latest
-  #   entrypoint: ["tail", "-f", "/dev/null"]
-  #   volumes:
-  #     - ./scripts:/scripts
-  #   networks:
-  #     - app-network
-  #   depends_on:
-  #     - server
+  k6:
+    image: grafana/k6:0.48.0
+    volumes:
+      - ./scripts/k6:/scripts
+    environment:
+      - BASE_URL=http://traefik
+    networks:
+      - app-network
+    depends_on:
+      - server
+    profiles:
+      - k6
 
 # =========================
 # Volumes
